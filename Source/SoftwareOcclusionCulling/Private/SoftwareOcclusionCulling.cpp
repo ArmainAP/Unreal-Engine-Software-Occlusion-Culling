@@ -3,7 +3,7 @@
 #include "SoftwareOcclusionCulling.h"
 
 #include "ISettingsModule.h"
-#include "Data/OcclusionSettings.h"
+#include "Data/DefaultOcclusionSettings.h"
 
 #define LOCTEXT_NAMESPACE "FSoftwareOcclusionCullingModule"
 
@@ -14,7 +14,7 @@ void FSoftwareOcclusionCullingModule::StartupModule()
 		SettingsModule->RegisterSettings("Project", "Plugins", "SoftwareOcclusionCulling",
 			LOCTEXT("SoftwareOcclusionCullingName", "Software Occlusion Culling"),
 			LOCTEXT("SoftwareOcclusionCullingDescription", "Default settings for Software Occlusion Culling"),
-			GetMutableDefault<UOcclusionSettings>()
+			GetMutableDefault<UDefaultOcclusionSettings>()
 		);
 	}
 }

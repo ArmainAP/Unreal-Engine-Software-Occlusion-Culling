@@ -4,21 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
-#include "OcclusionSettings.generated.h"
+#include "DefaultOcclusionSettings.generated.h"
 
-/**
- * 
- */
-UCLASS(Config = Engine, DefaultConfig)
-class SOFTWAREOCCLUSIONCULLING_API UOcclusionSettings : public UObject
+USTRUCT(Blueprintable, BlueprintType)
+struct FOcclusionSettings
 {
 	GENERATED_BODY()
 
-public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bUseAsOccluder = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	bool bCanBeOccludee = true;
+	bool bCanBeOcluded = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bAllowBoundsUpdate = true;
 	
@@ -33,4 +29,17 @@ public:
 	FVector CustomBounds = FVector::OneVector;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bUseCustomBounds"))
 	FVector CustomBoundsOffset = FVector::ZeroVector;
+};
+
+/**
+ * 
+ */
+UCLASS(Config = Engine, DefaultConfig)
+class SOFTWAREOCCLUSIONCULLING_API UDefaultOcclusionSettings : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FOcclusionSettings DefaultOcclusionSettings;
 };

@@ -6,6 +6,10 @@
 #include "IXRTrackingSystem.h"
 #include "Kismet/GameplayStatics.h"
 
+#if WITH_EDITOR
+#include "Editor.h"
+#endif
+
 struct FOcclusionViewInfo
 {
 	FOcclusionViewInfo() = default;
