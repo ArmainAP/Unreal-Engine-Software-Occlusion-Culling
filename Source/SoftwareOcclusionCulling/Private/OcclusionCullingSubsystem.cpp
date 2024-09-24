@@ -27,6 +27,14 @@ static FAutoConsoleVariableRef CVarVisualizeBoundsRef(
 	ECVF_Cheat
 );
 
+UOcclusionCullingSubsystem::UOcclusionCullingSubsystem() = default;
+UOcclusionCullingSubsystem::~UOcclusionCullingSubsystem() = default;
+
+UOcclusionCullingSubsystem::UOcclusionCullingSubsystem(FVTableHelper& Helper)
+	: Super(Helper)
+{
+}
+
 void UOcclusionCullingSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
@@ -155,7 +163,7 @@ bool UOcclusionCullingSubsystem::RegisterOcclusionSettings(UStaticMeshComponent*
 		return false;
 	}
 
-	if(const auto FoundPrimitiveInfo = PrimitiveContextMap.Find(StaticMeshComponent->ComponentId))
+	if(const auto FoundPrimitiveInfo = PrimitiveContextMap.Find(StaticMeshComponent->GetPrimitiveSceneId()))
 	{
 		UOcclusionPrimitiveContext* PrimitiveInfo = *FoundPrimitiveInfo;
 		PrimitiveInfo->SetOcclusionSettings(OcclusionSettings);
@@ -164,14 +172,14 @@ bool UOcclusionCullingSubsystem::RegisterOcclusionSettings(UStaticMeshComponent*
 	{
 		UOcclusionPrimitiveContext* PrimitiveInfo = NewObject<UOcclusionPrimitiveContext>();
 		PrimitiveInfo->Setup(StaticMeshComponent, OcclusionSettings);
-		PrimitiveContextMap.Add(StaticMeshComponent->ComponentId, PrimitiveInfo);
+		PrimitiveContextMap.Add(StaticMeshComponent->GetPrimitiveSceneId(), PrimitiveInfo);
 	}
 	return true;
 }
 
 void UOcclusionCullingSubsystem::UnregisterOcclusionSettings(const UStaticMeshComponent* StaticMeshComponent)
 {
-	PrimitiveContextMap.Remove(StaticMeshComponent->ComponentId);
+	PrimitiveContextMap.Remove(StaticMeshComponent->GetPrimitiveSceneId());
 }
 
 void UOcclusionCullingSubsystem::PopulateScene(TArray<FOcclusionPrimitiveProxy*>& Scene)
@@ -189,14 +197,14 @@ void UOcclusionCullingSubsystem::PopulateScene(TArray<FOcclusionPrimitiveProxy*>
 			continue;
 		}
 
-		if(!PrimitiveContextMap.Contains(Component->ComponentId))
+		if(!PrimitiveContextMap.Contains(Component->GetPrimitiveSceneId()))
 		{
 			const FOcclusionSettings& OcclusionSettings = GetDefault<UDefaultOcclusionSettings>()->DefaultOcclusionSettings;
 			const bool bRegistered = RegisterOcclusionSettings(Component, OcclusionSettings);
 			if(!bRegistered) continue;
 		}
 
-		UOcclusionPrimitiveContext* PrimitiveInfo = PrimitiveContextMap[Component->ComponentId];
+		UOcclusionPrimitiveContext* PrimitiveInfo = PrimitiveContextMap[Component->GetPrimitiveSceneId()];
 		PrimitiveInfo->UpdateBounds();
 		if (PrimitiveInfo->PerformFrustumCull(PlayerCameraManager))
 		{

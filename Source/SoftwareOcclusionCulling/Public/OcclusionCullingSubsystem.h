@@ -20,6 +20,10 @@ class SOFTWAREOCCLUSIONCULLING_API UOcclusionCullingSubsystem : public ULocalPla
 	GENERATED_BODY()
 
 public:
+	UOcclusionCullingSubsystem();
+	~UOcclusionCullingSubsystem();
+	UOcclusionCullingSubsystem(FVTableHelper& Helper);
+
 	virtual void Deinitialize() override;
 	virtual void PlayerControllerChanged(APlayerController* NewPlayerController) override;
 

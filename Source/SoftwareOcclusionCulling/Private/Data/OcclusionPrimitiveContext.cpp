@@ -13,7 +13,7 @@ void UOcclusionPrimitiveContext::Setup(UStaticMeshComponent* InStaticMeshCompone
 void UOcclusionPrimitiveContext::SetMesh(UStaticMeshComponent* InStaticMeshComponent)
 {
 	StaticMeshComponent = InStaticMeshComponent;
-	PrimitiveProxy.PrimitiveComponentId = StaticMeshComponent->ComponentId;
+	PrimitiveProxy.PrimitiveComponentId = StaticMeshComponent->GetPrimitiveSceneId();
 	if(OcclusionSettings.bUseAsOccluder)
 	{
 		PrimitiveProxy.OccluderData = MakeUnique<FOccluderMeshData>(StaticMeshComponent.Get()->GetStaticMesh());
