@@ -38,6 +38,8 @@ public class SoftwareOcclusionCulling : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"HeadMountedDisplay",
+				"Settings"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
