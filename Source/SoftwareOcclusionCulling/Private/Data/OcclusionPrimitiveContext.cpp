@@ -16,14 +16,14 @@ void UOcclusionPrimitiveContext::SetMesh(UStaticMeshComponent* InStaticMeshCompo
 	PrimitiveProxy.PrimitiveComponentId = StaticMeshComponent->GetPrimitiveSceneId();
 	if(OcclusionSettings.bUseAsOccluder)
 	{
-		PrimitiveProxy.OccluderData = MakeUnique<FOccluderMeshData>(StaticMeshComponent.Get()->GetStaticMesh());
+		PrimitiveProxy.OccluderData = MakeUnique<FOccluderMeshData>(StaticMeshComponent->GetStaticMesh());
 	}
 	UpdateBoundsInternal();
 }
 
 bool UOcclusionPrimitiveContext::PerformFrustumCull(const APlayerCameraManager* PlayerCameraManager) const
 {
-	if(!StaticMeshComponent.IsValid())
+	if(!IsValid(StaticMeshComponent))
 	{
 		return false;
 	}
@@ -55,7 +55,7 @@ bool UOcclusionPrimitiveContext::PerformFrustumCull(const APlayerCameraManager* 
 
 void UOcclusionPrimitiveContext::UpdateBoundsInternal()
 {
-	if(!StaticMeshComponent.IsValid())
+	if(!IsValid(StaticMeshComponent))
 	{
 		return;
 	}
@@ -95,7 +95,7 @@ void UOcclusionPrimitiveContext::UpdateBoundsInternal()
 
 bool UOcclusionPrimitiveContext::ShouldUpdateBounds() const
 {
-	if(!StaticMeshComponent.IsValid())
+	if(!IsValid(StaticMeshComponent))
 	{
 		return false;
 	}
@@ -104,7 +104,7 @@ bool UOcclusionPrimitiveContext::ShouldUpdateBounds() const
 
 void UOcclusionPrimitiveContext::SetHiddenInGame(const bool bHidden) const
 {
-	if(!StaticMeshComponent.IsValid())
+	if(!IsValid(StaticMeshComponent))
 	{
 		return;
 	}
@@ -115,7 +115,21 @@ void UOcclusionPrimitiveContext::SetHiddenInGame(const bool bHidden) const
 
 void UOcclusionPrimitiveContext::DebugBounds() const
 {
-	//Occluder && Occluded
+	// Check if StaticMeshComponent is valid
+	if (!IsValid(StaticMeshComponent))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DebugBounds: StaticMeshComponent is null."));
+		return;
+	}
+
+	const UWorld* World = StaticMeshComponent->GetWorld();
+	if (!World)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DebugBounds: World is null."));
+		return;
+	}
+	
+	// Occluder && Occluded
 	FColor BoundsColor = FColor::Red;
 
 	// Only Occluder
@@ -136,5 +150,5 @@ void UOcclusionPrimitiveContext::DebugBounds() const
 		BoundsColor = FColor::Yellow;
 	}
 
-	DrawDebugBox(StaticMeshComponent->GetWorld(), PrimitiveProxy.Bounds.Origin, PrimitiveProxy.Bounds.BoxExtent, FQuat::Identity, BoundsColor, false);
+	DrawDebugBox(World, PrimitiveProxy.Bounds.Origin, PrimitiveProxy.Bounds.BoxExtent, FQuat::Identity, BoundsColor, false);
 }

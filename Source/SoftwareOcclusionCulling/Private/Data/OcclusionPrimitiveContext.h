@@ -42,8 +42,10 @@ public:
 
 private:
 	void UpdateBoundsInternal();
-	TWeakObjectPtr<UStaticMeshComponent> StaticMeshComponent;
-	FOcclusionSettings OcclusionSettings;
 
+	UPROPERTY()
+	UStaticMeshComponent* StaticMeshComponent;
+	
+	FOcclusionSettings OcclusionSettings;
 	FOcclusionPrimitiveProxy PrimitiveProxy;
 };
