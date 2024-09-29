@@ -3,8 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "OccluderMeshData.h"
-#include "OcclusionPrimitiveProxy.h"
+#include "Data/OcclusionPrimitiveProxy.h"
 #include "Data/DefaultOcclusionSettings.h"
 #include "OcclusionPrimitiveContext.generated.h"
 
@@ -35,9 +34,9 @@ public:
 		}
 	}
 
-	FORCEINLINE FOcclusionPrimitiveProxy* GetProxy()
+	FORCEINLINE FOcclusionPrimitiveProxy GetProxy()
 	{
-		return &PrimitiveProxy;
+		return PrimitiveProxy;
 	}
 
 private:

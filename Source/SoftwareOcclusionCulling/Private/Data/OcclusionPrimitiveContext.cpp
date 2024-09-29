@@ -1,6 +1,6 @@
 ﻿// Copyright to Kat Code Labs, SRL. All Rights Reserved.
 
-#include "OcclusionPrimitiveContext.h"
+#include "Data/OcclusionPrimitiveContext.h"
 #include "DrawDebugHelpers.h"
 
 void UOcclusionPrimitiveContext::Setup(UStaticMeshComponent* InStaticMeshComponent,
@@ -16,7 +16,7 @@ void UOcclusionPrimitiveContext::SetMesh(UStaticMeshComponent* InStaticMeshCompo
 	PrimitiveProxy.PrimitiveComponentId = StaticMeshComponent->GetPrimitiveSceneId();
 	if(OcclusionSettings.bUseAsOccluder)
 	{
-		PrimitiveProxy.OccluderData = MakeUnique<FOccluderMeshData>(StaticMeshComponent->GetStaticMesh());
+		PrimitiveProxy.OccluderData = FOccluderMeshData(StaticMeshComponent->GetStaticMesh());
 	}
 	UpdateBoundsInternal();
 }
