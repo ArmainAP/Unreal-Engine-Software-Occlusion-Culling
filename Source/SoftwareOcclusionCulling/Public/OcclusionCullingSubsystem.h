@@ -7,9 +7,10 @@
 #include "Data/DefaultOcclusionSettings.h"
 #include "Subsystems/LocalPlayerSubsystem.h"
 #include "Async/TaskGraphInterfaces.h"
+#include "Data/OcclusionFrameResults.h"
+#include "Data/OcclusionSceneData.h"
+#include "Data/OcclusionViewInfo.h"
 #include "OcclusionCullingSubsystem.generated.h"
-
-struct FOcclusionFrameResults;
 
 /**
  * 
@@ -24,7 +25,6 @@ public:
 	~UOcclusionCullingSubsystem();
 	UOcclusionCullingSubsystem(FVTableHelper& Helper);
 
-	virtual void Deinitialize() override;
 	virtual void PlayerControllerChanged(APlayerController* NewPlayerController) override;
 
 	virtual TStatId GetStatId() const override;
@@ -42,16 +42,20 @@ public:
 	void UnregisterOcclusionSettings(const UStaticMeshComponent* StaticMeshComponent);
 
 private:
-	void PopulateScene(TArray<FOcclusionPrimitiveProxy*>& Scene);
-	int32 ProcessScene(const TArray<FOcclusionPrimitiveProxy*>& Scene);
-	int32 ApplyResults(const TArray<FOcclusionPrimitiveProxy*> Scene, const FOcclusionFrameResults& Results);
-	void FlushSceneProcessing();
+	void PopulateScene(TArray<FOcclusionPrimitiveProxy>& Scene);
+	int32 ProcessScene(const TArray<FOcclusionPrimitiveProxy>& Scene);
+	FOcclusionSceneData CollectSceneData(const TArray<FOcclusionPrimitiveProxy>& Scene, FOcclusionViewInfo View, FOcclusionFrameResults& OutResults);
+	int32 ApplyResults(const TArray<FOcclusionPrimitiveProxy> Scene);
 
 	UPROPERTY()
 	APlayerCameraManager* PlayerCameraManager;
-	TMap<FPrimitiveComponentId, UOcclusionPrimitiveContext*> PrimitiveContextMap;
 
-	FGraphEventRef TaskRef;
-    TUniquePtr<FOcclusionFrameResults> Available;
-    TUniquePtr<FOcclusionFrameResults> Processing;
+	UPROPERTY()
+	TMap<uint32, UOcclusionPrimitiveContext*> PrimitiveContextMap;
+
+	UPROPERTY()
+    FOcclusionFrameResults LastFrameResults;
+
+	UPROPERTY()
+	FOcclusionFrameResults FrameResults;
 };

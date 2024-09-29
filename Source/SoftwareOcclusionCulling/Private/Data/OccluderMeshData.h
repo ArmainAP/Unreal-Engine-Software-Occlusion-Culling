@@ -4,16 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "OccluderMeshData.generated.h"
 
-typedef TArray<FVector> FOccluderVertexArray;
-typedef TArray<uint16> FOccluderIndexArray;
-typedef TSharedPtr<FOccluderVertexArray, ESPMode::ThreadSafe> FOccluderVertexArraySP;
-typedef TSharedPtr<FOccluderIndexArray, ESPMode::ThreadSafe> FOccluderIndexArraySP;
-
+USTRUCT()
 struct FOccluderMeshData
 {
-	FOccluderVertexArraySP VerticesSP = MakeShared<FOccluderVertexArray, ESPMode::ThreadSafe>();
-	FOccluderIndexArraySP IndicesSP = MakeShared<FOccluderIndexArray, ESPMode::ThreadSafe>();
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<FVector> Vertices;
+
+	UPROPERTY()
+	TArray<uint16> Indices;
 
 	FOccluderMeshData() = default;
 	explicit FOccluderMeshData(UStaticMesh* StaticMesh)
@@ -40,16 +42,16 @@ struct FOccluderMeshData
 		const int32 NumIndices = IndexBuffer.GetNumIndices();
 		if (NumVtx > 0 && NumIndices > 0 && !IndexBuffer.Is32Bit())
 		{
-			VerticesSP->SetNumUninitialized(NumVtx);
+			Vertices.SetNumUninitialized(NumVtx);
 			for (int i = 0; i < NumVtx; ++i)
 			{
-				VerticesSP->GetData()[i] = FVector(LODModel.VertexBuffers.PositionVertexBuffer.VertexPosition(i));
+				Vertices.GetData()[i] = FVector(LODModel.VertexBuffers.PositionVertexBuffer.VertexPosition(i));
 			}
 
-			IndicesSP->SetNumUninitialized(NumIndices);
+			Indices.SetNumUninitialized(NumIndices);
 			for (int i = 0; i < NumIndices; ++i)
 			{
-				IndicesSP->GetData()[i] = IndexBuffer.AccessStream16()[i];
+				Indices.GetData()[i] = IndexBuffer.AccessStream16()[i];
 			}
 		}
 	}

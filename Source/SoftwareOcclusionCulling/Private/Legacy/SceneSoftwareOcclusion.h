@@ -8,8 +8,10 @@
 #include "Async/TaskGraphInterfaces.h"
 #include "Math/Vector.h"
 #include "SceneManagement.h"
+#include "Data/OcclusionFrameResults.h"
 #include "Data/OcclusionPrimitiveProxy.h"
 #include "Data/OcclusionViewInfo.h"
+#include "Data/OcclusionSceneData.h"
 
 // //////////////////////////////////////////////////////
 
@@ -60,10 +62,6 @@ static FAutoConsoleVariableRef CVarSOSIMD(
 	ECVF_RenderThreadSafe
 );
 
-static constexpr int32 BIN_WIDTH = 64;
-static constexpr int32 BIN_NUM = 6;
-static constexpr int32 FRAMEBUFFER_WIDTH = BIN_WIDTH * BIN_NUM;
-static constexpr int32 FRAMEBUFFER_HEIGHT = 256;
 
 namespace EScreenVertexFlags
 {
@@ -76,10 +74,7 @@ namespace EScreenVertexFlags
 	constexpr uint8 Discard = 1 << 5;	// Polygon using this vertex should be discarded
 }
 
-struct FFramebufferBin
-{
-	uint64 Data[FRAMEBUFFER_HEIGHT];
-};
+
 
 struct FScreenPosition
 {
@@ -91,19 +86,7 @@ struct FScreenTriangle
 	FScreenPosition V[3];
 };
 
-struct FOcclusionFrameResults
-{
-	FFramebufferBin	Bins[BIN_NUM];
-	TMap<FPrimitiveComponentId, bool> VisibilityMap;
-};
 
-struct FOcclusionMeshData
-{
-	FMatrix					LocalToWorld;
-	FOccluderVertexArraySP	VerticesSP;
-	FOccluderIndexArraySP	IndicesSP;
-	FPrimitiveComponentId	PrimId;
-};
 
 struct FSortedIndexDepth
 {
@@ -133,15 +116,6 @@ struct FOcclusionFrameData
 		ScreenTrianglesPrimID.Reserve(NumTriangles);
 		ScreenTrianglesFlags.Reserve(NumTriangles);
 	}
-};
-
-struct FOcclusionSceneData
-{
-	FMatrix							ViewProj;
-	TArray<FVector>					OccludeeBoxMinMax;
-	TArray<FPrimitiveComponentId>	OccludeeBoxPrimId;
-	TArray<FOcclusionMeshData>		OccluderData;
-	int32							NumOccluderTriangles;
 };
 
 inline uint64 ComputeBinRowMask(int32 BinMinX, float fX0, float fX1)
@@ -612,20 +586,19 @@ static void ProcessOccluderGeom(const FOcclusionSceneData& SceneData, FOcclusion
 	const float W_CLIP = SceneData.ViewProj.M[3][2];
 
 	const int32 NumMeshes = SceneData.OccluderData.Num();
-	const FOcclusionMeshData* MeshData = SceneData.OccluderData.GetData();
 
 	TArray<FVector4>	ClipVertexBuffer;
 	TArray<uint8>		ClipVertexFlagsBuffer;
 
 	for (int32 MeshIdx = 0; MeshIdx < NumMeshes; ++MeshIdx)
 	{
-		const FOcclusionMeshData& Mesh = MeshData[MeshIdx];
-		int32 NumVtx = Mesh.VerticesSP->Num();
+		const FOcclusionMeshData& Mesh = SceneData.OccluderData[MeshIdx];
+		int32 NumVtx = Mesh.Data.Vertices.Num();
 
 		ClipVertexBuffer.SetNumUninitialized(NumVtx, false);
 		ClipVertexFlagsBuffer.SetNumUninitialized(NumVtx, false);
 
-		const FVector* MeshVertices = Mesh.VerticesSP->GetData();
+		const FVector* MeshVertices = Mesh.Data.Vertices.GetData();
 		FVector4* MeshClipVertices = ClipVertexBuffer.GetData();
 		uint8* MeshClipVertexFlags = ClipVertexFlagsBuffer.GetData();
 
@@ -660,8 +633,8 @@ static void ProcessOccluderGeom(const FOcclusionSceneData& SceneData, FOcclusion
 			}
 		}
 
-		const uint16* MeshIndices = Mesh.IndicesSP->GetData();
-		int32 NumTris = Mesh.IndicesSP->Num() / 3;
+		const uint16* MeshIndices = Mesh.Data.Indices.GetData();
+		int32 NumTris = Mesh.Data.Indices.Num() / 3;
 
 		// Create triangles
 		for (int32 i = 0; i < NumTris; ++i)
@@ -680,7 +653,7 @@ static void ProcessOccluderGeom(const FOcclusionSceneData& SceneData, FOcclusion
 				continue;
 			}
 
-			FVector4 V[3] =
+			const FVector4 V[3] =
 			{
 				MeshClipVertices[I0],
 				MeshClipVertices[I1],
@@ -769,17 +742,17 @@ public:
 		CurrentPrimitiveId = PrimitiveId;
 	}
 
-	void AddElements(const FOccluderVertexArraySP& Vertices, const FOccluderIndexArraySP& Indices, const FMatrix& LocalToWorld) const
+	void AddElements(const TArray<FVector>& Vertices, const TArray<uint16>& Indices, const FMatrix& LocalToWorld) const
 	{
 		SceneData.OccluderData.AddDefaulted();
 		FOcclusionMeshData& MeshData = SceneData.OccluderData.Last();
 
 		MeshData.PrimId = CurrentPrimitiveId;
 		MeshData.LocalToWorld = LocalToWorld;
-		MeshData.VerticesSP = Vertices;
-		MeshData.IndicesSP = Indices;
+		MeshData.Data.Vertices = Vertices;
+		MeshData.Data.Indices = Indices;
 
-		SceneData.NumOccluderTriangles += Indices->Num() / 3;
+		SceneData.NumOccluderTriangles += Indices.Num() / 3;
 	}
 
 public:
@@ -887,10 +860,10 @@ static ENamedThreads::Type GetOcclusionThreadName()
 	return ThreadNameMap[Index];
 }
 
-struct FPotentialOccluderPrimitive
+struct FPotentialOccluderPrimitive // TODO: Assignment operator for nicer code?
 {
 	FPrimitiveComponentId PrimitiveComponentId;
-	const FOccluderMeshData* OccluderData;
+	FOccluderMeshData OccluderData;
 	FMatrix LocalToWorld;
 
 	float Weight;
@@ -900,113 +873,4 @@ static constexpr float OCCLUDER_DISTANCE_WEIGHT = 10000.f;
 static float ComputePotentialOccluderWeight(const float ScreenSize, const float DistanceSquared)
 {
 	return ScreenSize + OCCLUDER_DISTANCE_WEIGHT / DistanceSquared;
-}
-
-static FGraphEventRef SubmitScene(const TArray<FOcclusionPrimitiveProxy*> Scene, FOcclusionViewInfo View, FOcclusionFrameResults* Results)
-{
-	int32 NumCollectedOccluders = 0;
-	int32 NumCollectedOccludees = 0;
-
-	const FMatrix ViewProjMat = View.ViewMatrix * View.ProjectionMatrix;
-	const FVector ViewOrigin = View.Origin;
-	const float MaxDistanceSquared = FMath::Square(GSOMaxDistanceForOccluder);
-
-	// Allocate occlusion scene
-	TUniquePtr<FOcclusionSceneData> SceneData = MakeUnique<FOcclusionSceneData>();
-	SceneData->ViewProj = ViewProjMat;
-
-	constexpr int32 NumReserveOccludee = 1024;
-	SceneData->OccludeeBoxPrimId.Reserve(NumReserveOccludee);
-	SceneData->OccludeeBoxMinMax.Reserve(NumReserveOccludee * 2);
-	SceneData->OccluderData.Reserve(GSOMaxOccluderNum);
-
-	// Collect scene geometry for occluder/occluded
-	{
-		SCOPE_CYCLE_COUNTER(STAT_SoftwareOcclusionGather);
-
-		FSWOccluderElementsCollector Collector(*SceneData);
-
-		TArray<FPotentialOccluderPrimitive> PotentialOccluders;
-		PotentialOccluders.Reserve(GSOMaxOccluderNum);
-
-		for (FOcclusionPrimitiveProxy* Info : Scene)
-		{
-			FBoxSphereBounds Bounds = Info->Bounds;
-			const FPrimitiveComponentId PrimitiveComponentId = Info->PrimitiveComponentId;
-			FOccluderMeshData* OccluderData = Info->OccluderData.Get();
-			FMatrix LocalToWorld = Info->LocalToWorld;
-
-			const bool bHasHugeBounds = Bounds.SphereRadius > HALF_WORLD_MAX / 2.0f; // big objects like skybox
-			float DistanceSquared = 0.f;
-			float ScreenSize = 0.f;
-
-			// Find out whether primitive can/should be occluder or occludee
-			bool bCanBeOccluder = !bHasHugeBounds && Info->bOccluder;
-			if (bCanBeOccluder)
-			{
-				// Size/distance requirements
-				DistanceSquared = FMath::Max(OCCLUDER_DISTANCE_WEIGHT, (Bounds.Origin - ViewOrigin).SizeSquared() - FMath::Square(Bounds.SphereRadius));
-				if (DistanceSquared < MaxDistanceSquared)
-				{
-					ScreenSize = ComputeBoundsScreenSize(Bounds.Origin, Bounds.SphereRadius, View.Origin, View.ProjectionMatrix);
-				}
-
-				bCanBeOccluder = GSOMinScreenRadiusForOccluder < ScreenSize;
-			}
-
-			if (bCanBeOccluder)
-			{
-				PotentialOccluders.AddUninitialized();
-				FPotentialOccluderPrimitive& PotentialOccluder = PotentialOccluders.Last();
-
-				PotentialOccluder.PrimitiveComponentId = PrimitiveComponentId;
-				PotentialOccluder.OccluderData = OccluderData;
-				PotentialOccluder.LocalToWorld = LocalToWorld;
-				PotentialOccluder.Weight = ComputePotentialOccluderWeight(ScreenSize, DistanceSquared);
-			}
-
-			if (!bHasHugeBounds && Info->bOcluded)
-			{
-				// Collect occluded box
-				CollectOccludeeGeom(Bounds, PrimitiveComponentId, *SceneData);
-				NumCollectedOccludees++;
-			}
-		}
-
-		// Sort potential occluders by weight
-		PotentialOccluders.Sort([&](const FPotentialOccluderPrimitive& A, const FPotentialOccluderPrimitive& B) {
-			return A.Weight > B.Weight;
-		});
-
-		// Add sorted occluders to scene up to GSOMaxOccluderNum
-		for (const FPotentialOccluderPrimitive& PotentialOccluder : PotentialOccluders)
-		{
-			const FPrimitiveComponentId PrimitiveComponentId = PotentialOccluder.PrimitiveComponentId;
-			FOccluderMeshData* OccluderData = (FOccluderMeshData*)PotentialOccluder.OccluderData;
-
-			// Collect occluder geometry
-			Collector.SetPrimitiveID(PrimitiveComponentId);
-			Collector.AddElements(OccluderData->VerticesSP, OccluderData->IndicesSP, PotentialOccluder.LocalToWorld);
-			NumCollectedOccluders++;
-
-			if (NumCollectedOccluders >= GSOMaxOccluderNum)
-			{
-				break;
-			}
-		}
-	}
-
-	INC_DWORD_STAT_BY(STAT_SoftwareOccluders, NumCollectedOccluders);
-	INC_DWORD_STAT_BY(STAT_SoftwareOccludees, NumCollectedOccludees);
-
-	// Reserve space for occluded visibility flags 
-	Results->VisibilityMap.Reserve(NumCollectedOccludees);
-
-	// Submit occlusion task
-	FOcclusionSceneData* SceneDataParam = SceneData.Release();
-	return FFunctionGraphTask::CreateAndDispatchWhenReady([SceneDataParam, Results]()
-	{
-		ProcessOcclusionFrame(*SceneDataParam, *Results);
-		delete SceneDataParam;
-	}, GET_STATID(STAT_SoftwareOcclusionProcess), NULL, GetOcclusionThreadName());
 }
