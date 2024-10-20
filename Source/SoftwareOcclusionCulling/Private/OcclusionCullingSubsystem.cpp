@@ -42,6 +42,13 @@ void UOcclusionCullingSubsystem::PlayerControllerChanged(APlayerController* NewP
 	PlayerCameraManager = NewPlayerController->PlayerCameraManager;
 }
 
+void UOcclusionCullingSubsystem::Deinitialize()
+{
+	Super::Deinitialize();
+
+	FlushSceneProcessing();
+}
+
 TStatId UOcclusionCullingSubsystem::GetStatId() const
 {
 	RETURN_QUICK_DECLARE_CYCLE_STAT(UOcclusionCullingEngineSubsystem, STATGROUP_Tickables);
@@ -219,6 +226,9 @@ int32 UOcclusionCullingSubsystem::ProcessScene(const TArray<FOcclusionPrimitiveP
 	{
 		return 0;
 	}
+
+	// Make sure occlusion task issued last frame is completed
+	FlushSceneProcessing();
 	
 	// Finished processing occlusion, set results as available
 	LastFrameResults = MoveTemp(FrameResults);
@@ -226,16 +236,20 @@ int32 UOcclusionCullingSubsystem::ProcessScene(const TArray<FOcclusionPrimitiveP
 	// Submit occlusion scene for next frame
 	FrameResults = FOcclusionFrameResults();
 	const FOcclusionViewInfo ViewInfo = FOcclusionViewInfo(PlayerCameraManager);
-	const FOcclusionSceneData SceneData = CollectSceneData(Scene, ViewInfo, FrameResults);
-	ProcessOcclusionFrame(SceneData, FrameResults);
+	const FOcclusionSceneData SceneData = CollectSceneData(Scene, ViewInfo);
+
+	// Submit occlusion task
+	TaskRef = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
+	{
+		ProcessOcclusionFrame(SceneData, FrameResults);
+	}, GET_STATID(STAT_SoftwareOcclusionProcess), NULL, GetOcclusionThreadName());
 
 	// Apply available occlusion results
 	return ApplyResults(Scene);
 }
 
 FOcclusionSceneData UOcclusionCullingSubsystem::CollectSceneData(const TArray<FOcclusionPrimitiveProxy>& Scene,
-                                                                 FOcclusionViewInfo View,
-                                                                 FOcclusionFrameResults& OutResults)
+                                                                 FOcclusionViewInfo View)
 {
 	int32 NumCollectedOccluders = 0;
 	int32 NumCollectedOccludees = 0;
@@ -329,8 +343,6 @@ FOcclusionSceneData UOcclusionCullingSubsystem::CollectSceneData(const TArray<FO
 	INC_DWORD_STAT_BY(STAT_SoftwareOccluders, NumCollectedOccluders);
 	INC_DWORD_STAT_BY(STAT_SoftwareOccludees, NumCollectedOccludees);
 
-	// Reserve space for occluded visibility flags 
-	OutResults.VisibilityMap.Reserve(NumCollectedOccludees);
 	return SceneData;
 }
 
@@ -362,4 +374,13 @@ int32 UOcclusionCullingSubsystem::ApplyResults(const TArray<FOcclusionPrimitiveP
 	INC_DWORD_STAT_BY(STAT_SoftwareCulledPrimitives, NumOccluded);
 
 	return NumOccluded;
+}
+
+void UOcclusionCullingSubsystem::FlushSceneProcessing()
+{
+	if (TaskRef.IsValid())
+	{
+		FTaskGraphInterface::Get().WaitUntilTaskCompletes(TaskRef);
+		TaskRef = nullptr;
+	}
 }

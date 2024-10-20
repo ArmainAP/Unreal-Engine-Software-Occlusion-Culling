@@ -26,6 +26,7 @@ public:
 	UOcclusionCullingSubsystem(FVTableHelper& Helper);
 
 	virtual void PlayerControllerChanged(APlayerController* NewPlayerController) override;
+	virtual void Deinitialize() override;
 
 	virtual TStatId GetStatId() const override;
 	virtual bool IsAllowedToTick() const override;
@@ -44,8 +45,9 @@ public:
 private:
 	void PopulateScene(TArray<FOcclusionPrimitiveProxy>& Scene);
 	int32 ProcessScene(const TArray<FOcclusionPrimitiveProxy>& Scene);
-	FOcclusionSceneData CollectSceneData(const TArray<FOcclusionPrimitiveProxy>& Scene, FOcclusionViewInfo View, FOcclusionFrameResults& OutResults);
+	FOcclusionSceneData CollectSceneData(const TArray<FOcclusionPrimitiveProxy>& Scene, FOcclusionViewInfo View);
 	int32 ApplyResults(const TArray<FOcclusionPrimitiveProxy> Scene);
+	void FlushSceneProcessing();
 
 	UPROPERTY()
 	APlayerCameraManager* PlayerCameraManager;
@@ -58,4 +60,6 @@ private:
 
 	UPROPERTY()
 	FOcclusionFrameResults FrameResults;
+
+	FGraphEventRef TaskRef;
 };

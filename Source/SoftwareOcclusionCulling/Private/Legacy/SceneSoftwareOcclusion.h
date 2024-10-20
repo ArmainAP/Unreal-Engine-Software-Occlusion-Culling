@@ -4,13 +4,10 @@
 	SceneSoftwareOcclusion.cpp
 =============================================================================*/
 
-#include "EngineGlobals.h"
 #include "Async/TaskGraphInterfaces.h"
 #include "Math/Vector.h"
-#include "SceneManagement.h"
 #include "Data/OcclusionFrameResults.h"
 #include "Data/OcclusionPrimitiveProxy.h"
-#include "Data/OcclusionViewInfo.h"
 #include "Data/OcclusionSceneData.h"
 
 // //////////////////////////////////////////////////////
@@ -653,6 +650,12 @@ static void ProcessOccluderGeom(const FOcclusionSceneData& SceneData, FOcclusion
 				continue;
 			}
 
+			if (!ClipVertexBuffer.IsValidIndex(I0)
+				|| !ClipVertexBuffer.IsValidIndex(I1)
+				|| !ClipVertexBuffer.IsValidIndex(I2))
+			{
+				continue;
+			}
 			const FVector4 V[3] =
 			{
 				MeshClipVertices[I0],
@@ -760,7 +763,7 @@ public:
 	FPrimitiveComponentId CurrentPrimitiveId;
 };
 
-static void ProcessOcclusionFrame(const FOcclusionSceneData& InSceneData, FOcclusionFrameResults& OutResults)
+static void ProcessOcclusionFrame(const FOcclusionSceneData InSceneData, FOcclusionFrameResults& OutResults)
 {
 	FOcclusionFrameData FrameData;
 	const int32 NumExpectedTriangles = InSceneData.NumOccluderTriangles + InSceneData.OccludeeBoxPrimId.Num(); // one triangle for each occludee
