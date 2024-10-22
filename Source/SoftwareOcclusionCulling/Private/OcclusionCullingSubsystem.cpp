@@ -194,7 +194,7 @@ void UOcclusionCullingSubsystem::PopulateScene(TArray<FOcclusionPrimitiveProxy>&
 
 		if(!PrimitiveContextMap.Contains(Component->GetPrimitiveSceneId().PrimIDValue))
 		{
-			const FOcclusionSettings& OcclusionSettings = GetDefault<UDefaultOcclusionSettings>()->DefaultOcclusionSettings;
+			const FOcclusionSettings& OcclusionSettings = GetDefault<USoftwareOcclusionSettings>()->DefaultOcclusionSettings;
 			const bool bRegistered = RegisterOcclusionSettings(Component, OcclusionSettings);
 			if(!bRegistered) continue;
 		}

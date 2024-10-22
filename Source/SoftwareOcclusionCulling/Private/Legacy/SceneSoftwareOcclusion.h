@@ -649,18 +649,12 @@ static void ProcessOccluderGeom(const FOcclusionSceneData& SceneData, FOcclusion
 				// fully clipped
 				continue;
 			}
-
-			if (!ClipVertexBuffer.IsValidIndex(I0)
-				|| !ClipVertexBuffer.IsValidIndex(I1)
-				|| !ClipVertexBuffer.IsValidIndex(I2))
+			
+			const uint16 V[3] =
 			{
-				continue;
-			}
-			const FVector4 V[3] =
-			{
-				MeshClipVertices[I0],
-				MeshClipVertices[I1],
-				MeshClipVertices[I2]
+				I0,
+				I1,
+				I2
 			};
 
 			if (uint8 TriFlags = F0 | F1 | F2; TriFlags & EScreenVertexFlags::ClippedNear)
@@ -674,19 +668,25 @@ static void ProcessOccluderGeom(const FOcclusionSceneData& SceneData, FOcclusion
 					int32 i0 = Edges[EdgeIdx][0];
 					int32 i1 = Edges[EdgeIdx][1];
 
-					bool dot0 = V[i0].W < W_CLIP;
-					bool dot1 = V[i1].W < W_CLIP;
+					if (!ClipVertexBuffer.IsValidIndex(V[i0])
+						|| !ClipVertexBuffer.IsValidIndex(V[i1]))
+					{
+						continue;
+					}
+					
+					bool dot0 = MeshClipVertices[V[i0]].W < W_CLIP;
+					bool dot1 = MeshClipVertices[V[i1]].W < W_CLIP;
 
 					if (!dot0)
 					{
-						ClippedPos[NumPos] = V[i0];
+						ClippedPos[NumPos] = MeshClipVertices[V[i0]];
 						NumPos++;
 					}
 
 					if (dot0 != dot1)
 					{
-						float t = (W_CLIP - V[i0].W) / (V[i0].W - V[i1].W);
-						ClippedPos[NumPos] = V[i0] + t * (V[i0] - V[i1]);
+						float t = (W_CLIP - MeshClipVertices[V[i0]].W) / (MeshClipVertices[V[i0]].W - MeshClipVertices[V[i1]].W);
+						ClippedPos[NumPos] = MeshClipVertices[V[i0]] + t * (MeshClipVertices[V[i0]] - MeshClipVertices[V[i1]]);
 						NumPos++;
 					}
 				}
@@ -718,7 +718,14 @@ static void ProcessOccluderGeom(const FOcclusionSceneData& SceneData, FOcclusion
 
 				for (int32 j = 0; j < 3 && !bShouldDiscard; ++j)
 				{
-					bShouldDiscard |= ClippedVertexToScreen(V[j], Tri.V[j], Depths[j]);
+					if (ClipVertexBuffer.IsValidIndex(V[j]))
+					{
+						bShouldDiscard |= ClippedVertexToScreen(MeshClipVertices[V[j]], Tri.V[j], Depths[j]);
+					}
+					else
+					{
+						bShouldDiscard |= true;						
+					}
 				}
 
 				if (!bShouldDiscard && TestFrontface(Tri))

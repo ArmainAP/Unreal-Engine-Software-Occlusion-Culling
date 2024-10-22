@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Data/OcclusionPrimitiveContext.h"
-#include "Data/DefaultOcclusionSettings.h"
+#include "Data/SoftwareOcclusionSettings.h"
 #include "Subsystems/LocalPlayerSubsystem.h"
 #include "Async/TaskGraphInterfaces.h"
 #include "Data/OcclusionFrameResults.h"

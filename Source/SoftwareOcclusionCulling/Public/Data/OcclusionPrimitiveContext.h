@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Data/OcclusionPrimitiveProxy.h"
-#include "Data/DefaultOcclusionSettings.h"
+#include "Data/SoftwareOcclusionSettings.h"
 #include "OcclusionPrimitiveContext.generated.h"
 
 UCLASS()

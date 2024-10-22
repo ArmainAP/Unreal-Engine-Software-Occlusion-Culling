@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Data/DefaultOcclusionSettings.h"
+#include "Data/SoftwareOcclusionSettings.h"
 #include "SoftwareOcclusionCullingOverride.generated.h"
 
 

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "DefaultOcclusionSettings.generated.h"
+#include "SoftwareOcclusionSettings.generated.h"
 
 USTRUCT(Blueprintable, BlueprintType)
 struct FOcclusionSettings
@@ -34,7 +34,7 @@ struct FOcclusionSettings
  * 
  */
 UCLASS(Config = Plugin, DefaultConfig)
-class SOFTWAREOCCLUSIONCULLING_API UDefaultOcclusionSettings : public UDeveloperSettings
+class SOFTWAREOCCLUSIONCULLING_API USoftwareOcclusionSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
 
