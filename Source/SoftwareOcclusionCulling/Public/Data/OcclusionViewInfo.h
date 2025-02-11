@@ -21,7 +21,7 @@ struct FOcclusionViewInfo
 		Origin = MinimalView.Location;
 		if (ShouldUseStereoRendering())
 		{
-			ProjectionMatrix = GEngine->StereoRenderingDevice->GetStereoProjectionMatrix(0);	
+			ProjectionMatrix = GEngine->StereoRenderingDevice->GetStereoProjectionMatrix(EStereoscopicEye::eSSE_MONOSCOPIC);	
 		}
 	}
 

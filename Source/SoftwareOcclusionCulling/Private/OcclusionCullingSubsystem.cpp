@@ -187,6 +187,11 @@ void UOcclusionCullingSubsystem::PopulateScene(TArray<FOcclusionPrimitiveProxy>&
 			continue;
 		}
 
+		if(Component->HasAnyFlags(RF_ClassDefaultObject))
+		{
+			continue;
+		}
+		
 		if(Component->GetWorld() != GetLocalPlayer()->GetWorld())
 		{
 			continue;
@@ -236,13 +241,18 @@ int32 UOcclusionCullingSubsystem::ProcessScene(const TArray<FOcclusionPrimitiveP
 	// Submit occlusion scene for next frame
 	FrameResults = FOcclusionFrameResults();
 	const FOcclusionViewInfo ViewInfo = FOcclusionViewInfo(PlayerCameraManager);
-	const FOcclusionSceneData SceneData = CollectSceneData(Scene, ViewInfo);
+	FOcclusionSceneData SceneData = CollectSceneData(Scene, ViewInfo);
 
 	// Submit occlusion task
-	TaskRef = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-	{
-		ProcessOcclusionFrame(SceneData, FrameResults);
-	}, GET_STATID(STAT_SoftwareOcclusionProcess), NULL, GetOcclusionThreadName());
+	TaskRef = FFunctionGraphTask::CreateAndDispatchWhenReady(
+		[SceneData = MoveTemp(SceneData), FrameResults = &FrameResults]()
+		{
+			ProcessOcclusionFrame(SceneData, *FrameResults);
+		}, 
+		GET_STATID(STAT_SoftwareOcclusionProcess), 
+		NULL, 
+		GetOcclusionThreadName()
+	);
 
 	// Apply available occlusion results
 	return ApplyResults(Scene);

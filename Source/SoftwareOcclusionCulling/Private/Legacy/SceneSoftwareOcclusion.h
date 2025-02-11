@@ -592,8 +592,8 @@ static void ProcessOccluderGeom(const FOcclusionSceneData& SceneData, FOcclusion
 		const FOcclusionMeshData& Mesh = SceneData.OccluderData[MeshIdx];
 		int32 NumVtx = Mesh.Data.Vertices.Num();
 
-		ClipVertexBuffer.SetNumUninitialized(NumVtx, false);
-		ClipVertexFlagsBuffer.SetNumUninitialized(NumVtx, false);
+		ClipVertexBuffer.SetNumUninitialized(NumVtx, EAllowShrinking::Yes);
+		ClipVertexFlagsBuffer.SetNumUninitialized(NumVtx, EAllowShrinking::Yes);
 
 		const FVector* MeshVertices = Mesh.Data.Vertices.GetData();
 		FVector4* MeshClipVertices = ClipVertexBuffer.GetData();

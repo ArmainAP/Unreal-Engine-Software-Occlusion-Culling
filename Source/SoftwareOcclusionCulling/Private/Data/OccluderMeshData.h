@@ -20,12 +20,12 @@ struct FOccluderMeshData
 	FOccluderMeshData() = default;
 	explicit FOccluderMeshData(UStaticMesh* StaticMesh)
 	{
-		if(!IsValid(StaticMesh))
+		if (IsRunningDedicatedServer())
 		{
 			return;
 		}
 		
-		if (UKismetSystemLibrary::IsDedicatedServer(StaticMesh))
+		if(!IsValid(StaticMesh))
 		{
 			return;
 		}
